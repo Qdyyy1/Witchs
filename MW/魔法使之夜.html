@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图片轮播与控制器</title>
+<style>
+    /* 页面整体布局 */
+    #myAudio{
+        display: none;
+    }
+    body {
+        margin: 0;
+        padding: 0;
+        background-image: linear-gradient(to top, #fff1eb, #ace0f9 100%);
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        height: 100vh;
+    }
+    
+    /* 图片轮播容器 */
+    .image-carousel {
+        width: 100%;
+        height: 50vh; /* 占页面视口的一半高度 */
+        position: relative;
+        overflow: hidden;
+    }
+    
+    /* 图片样式 */
+    .image-carousel img {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.8); /* 默认缩小居中 */
+        opacity: 0; /* 初始隐藏 */
+        transition: transform 1s ease, opacity 1s ease; /* 平滑过渡 */
+        z-index: 0;
+        width: auto;
+        height: 100%;
+    }
+    
+    .image-carousel img.active {
+        transform: translate(-50%, -50%) scale(1); /* 放大显示 */
+        opacity: 1; /* 完全显示 */
+        z-index: 2; /* 提升层级 */
+    }
+    
+    .image-carousel img.left {
+        transform: translate(-150%, -50%) scale(0.8); /* 左侧偏移 */
+        opacity: 0.6; /* 半透明 */
+        z-index: 1;
+    }
+    
+    .image-carousel img.right {
+        transform: translate(50%, -50%) scale(0.8); /* 右侧偏移 */
+        opacity: 0.6; /* 半透明 */
+        z-index: 1;
+    }
+    
+    .image-carousel img.hidden {
+        opacity: 0;
+        z-index: 0;
+    }
+    
+    /* 控制器部分 */
+    .player {
+        margin-top: 200px; /* 与轮播图片间距 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%; /* 占满页面宽度 */
+    }
+    
+    .controller {
+        width: 70%; /* 控制器宽度 */
+        height: 100px; /* 控制器高度 */
+        border-radius: 10px;
+        background: #ffffff;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        position: relative;
+    }
+    .controller.active .album::before{
+        animation: rotateF 3s infinite linear;
+    }
+    @keyframes rotateF{
+        0%{
+            transform: rotate(0deg);
+        }
+        100%{
+            transform: rotate(360deg);
+
+        }
+    }
+    /* 圆形按钮样式 */
+    .album {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        position: absolute;
+        top: -30px;
+        left: 50px;
+        background: #000;
+        transform: scale(1);
+        transition: all 0.5s ease;
+        z-index: 1;
+    }
+    .album::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        bottom: 0;
+        border-radius: 50%;
+        background: url(./img/bg1.jpg) no-repeat center center;
+        background-size: 100%;
+    }
+    
+    .buts {
+        display: flex;
+        justify-content: space-around; /* 平均分配按钮间隔 */
+        width: 60%; /* 控制器按钮宽度 */
+        height: 80px;
+        padding: 0 15px;
+    }
+    
+    .prev, .play, .next {
+        width: 80px; /* 增加按钮大小 */
+        height: 80px; /* 增加按钮大小 */
+        border-radius: 50%; /* 圆形按钮 */
+        background-color: #000;
+        background-repeat: no-repeat;
+        background-position: center;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.3s ease;
+        background-size:contain; /* 使图标完全适应按钮大小 */
+    }
+
+    .prev:hover, .play:hover, .next:hover {
+        background-color: #eee; /* 鼠标悬停时改变背景颜色 */
+        transform: scale(1.1); /* 鼠标悬停时轻微放大 */
+    }
+
+    .prev {
+        background: url(./img/prev.jpg) no-repeat center center;
+    }
+
+    .play {
+        background: url(./img/play.jpg) no-repeat center center;
+    }
+
+    .next {
+        background: url(./img/next.jpg) no-repeat center center;
+    }
+    .controller.active .play{
+        background: url(./img/pause.jpg) no-repeat center center;
+        background-size:contain;
+   
+    }
+    .info {
+    opacity: 0;
+    position: absolute;
+    bottom: 100%; /* 使 .info 的下沿与 .controller 的上沿对齐 */
+    left: 10px;
+    right: 10px;
+    height: 60px; /* 适当设置高度 */
+    background: rgba(255, 255, 255, 0.5); /* 半透明背景 */
+    padding: 5px 15px;
+    border-radius: 15px;
+    text-align: center;
+    z-index: 0; /* 确保 .info 在 .album 之上 */
+}
+
+    /* 激活时显示信息 */
+    .info.active {
+        opacity: 1;
+    }
+    .song{
+        color: #222;
+        font-size: 16px;
+        margin-bottom: 5px;
+    }
+    .progress{
+        height: 2px;
+        width: 100%;
+        background: #ddd;
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    .bar{
+        background: red; /* 进度条颜色 */
+        width: 0%; /* 初始宽度为 0% */
+        height: 100%; /* 进度条的高度占满容器 */
+        transition: width 0.1s linear; /* 平滑过渡，增加流畅感 */
+    }
+    .song-title {
+    width: 100%; /* 宽度占满 */
+    background: linear-gradient(to bottom, #001b45, #15224b 50%, #001b45); /* 渐变背景 */
+    color: white; /* 字体颜色为白色 */
+    font-family: Arial, sans-serif; /* 使用无衬线字体 */
+    font-weight: bold; /* 加粗 */
+    font-size: 24px; /* 字体大小 */
+    letter-spacing: 5px; /* 增加字母间距 */
+    text-align: center; /* 水平居中 */
+    line-height: 60px; /* 设置行高，垂直居中 */
+    text-transform: uppercase; /* 全部大写 */
+    position: relative; /* 定位以便添加边框 */
+    padding: 10px 0; /* 内边距 */
+    border-top: 2px solid rgba(255, 255, 255, 0.6); /* 上边光线效果 */
+    border-bottom: 2px solid rgba(255, 255, 255, 0.6); /* 下边光线效果 */
+}
+/* 挂件样式 */
+.widget {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 10px;
+    cursor: grab;
+    background-size: cover;
+    background-position: center;
+    background-image: url('./img/n1.jpg'); /* 默认图片路径 */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: box-shadow 0.3s ease;
+    z-index: 10; /* 提高挂件的层级 */
+}
+
+.widget:active {
+    cursor: grabbing;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+</style>
+
+    
+<script>
+    
+let currentIndex = 0;
+
+function updateCarousel() {
+    const images = document.querySelectorAll('.image-carousel img');
+    const totalImages = images.length;
+
+    images.forEach((img, index) => {
+        img.classList.remove('active', 'left', 'right', 'hidden');
+
+        if (index === currentIndex) {
+            img.classList.add('active'); // 中间图片
+        } else if (index === (currentIndex - 1 + totalImages) % totalImages) {
+            img.classList.add('left'); // 左侧图片
+        } else if (index === (currentIndex + 1) % totalImages) {
+            img.classList.add('right'); // 右侧图片
+        } else {
+            img.classList.add('hidden'); // 其他图片
+        }
+    });
+}
+
+function nextImage() {
+    const images = document.querySelectorAll('.image-carousel img');
+    currentIndex = (currentIndex + 1) % images.length;
+    updateCarousel();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateCarousel(); // 初始化显示
+    setInterval(nextImage, 3000); // 每3秒切换一次
+});
+
+</script>
+</head>
+<body>
+
+<!-- 图片轮播容器 -->
+<div class="image-carousel">
+    <img src="./img/1.jpg" alt="图片1">
+    <img src="./img/2.jpg" alt="图片2">
+    <img src="./img/3.jpg" alt="图片3">
+    <img src="./img/4.jpg" alt="图片4">
+    <img src="./img/5.jpg" alt="图片5">
+</div>
+<div class="song-title">Witches on the Holly night</div>
+<audio id="myAudio" autoplay loop></audio>
+<!-- 控制器部分 -->
+<div class="player">
+    <div class="controller active" id="controller">
+        <div class="album"></div>
+        <div class="buts">
+            <div class="prev"></div>
+                <div id="play" class="play"> </div>
+                    <div class="next"></div>  
+        </div>
+        <!-- information -->
+        <div class="info active" id="info">
+            <div class="song">Alice</div>
+            <div class="progress">
+                <div class="bar"></div>
+            </div>
+        </div>
+        <!-- infomation-->
+    </div>
+</div>
+<script>
+    //start buto
+    let myAudio = document.getElementById("myAudio");
+let progressBar = document.querySelector(".bar");
+
+// 播放按钮的点击事件
+let playBut = document.getElementById("play");
+let ct = document.getElementById('controller');
+let infoBar = document.getElementById("info");
+
+// 播放/暂停函数
+function playF() {
+    let flag = Array.from(ct.classList).some(function(item) { return item == "active"; });
+    if (flag) {
+        ct.classList.remove('active');
+        infoBar.classList.remove('active');
+        myAudio.pause();
+    } else {
+        ct.classList.add('active');
+        infoBar.classList.add('active');
+        myAudio.play();
+    }
+}
+
+// 为播放按钮绑定事件
+playBut.addEventListener('click', playF);
+
+// 更新进度条
+myAudio.addEventListener('timeupdate', function () {
+    if (!myAudio.duration) return; // 如果没有有效的音频时长，则不更新进度条
+    let progress = (myAudio.currentTime / myAudio.duration) * 100; // 计算播放进度百分比
+    progressBar.style.width = progress + "%"; // 更新进度条宽度
+});
+    /*
+    document.getElementById('play').addEventListener('click', () => {
+    const audio = document.getElementById('myAudio');
+    if (audio.paused) {
+        audio.play();
+        document.querySelector('.controller').classList.add('active');
+    } else {
+        audio.pause();
+        document.querySelector('.controller').classList.remove('active');
+    }
+       
+});
+ */
+ let playlist = [
+    "./music/深澤秀行 - 久遠寺有珠.flac",
+    "./music/深澤秀行 - 蒼崎青子.mp3",
+    "./music/深澤秀行 - Five.mp3"
+];
+let currentTrackIndex = 0;
+
+function playTrack(index) {
+    if (index < 0 || index >= playlist.length) return; // 防止越界
+    currentTrackIndex = index;
+    myAudio.src = playlist[currentTrackIndex]; // 更新音频源
+    myAudio.play();
+    ct.classList.add('active'); // 更新 UI 状态
+    infoBar.classList.add('active');
+    updateSongInfo(); // 更新歌曲信息
+}
+
+function nextTrack() {
+    let nextIndex = (currentTrackIndex + 1) % playlist.length; // 循环播放
+    playTrack(nextIndex);
+}
+
+function prevTrack() {
+    let prevIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length; // 循环播放
+    playTrack(prevIndex);
+}
+
+function updateSongInfo() {
+    let songTitle = document.querySelector(".song");
+    songTitle.textContent = `Now Playing: ${playlist[currentTrackIndex].split('/').pop()}`;
+}
+
+// 绑定 next 和 prev 按钮
+document.querySelector(".next").addEventListener("click", nextTrack);
+document.querySelector(".prev").addEventListener("click", prevTrack);
+
+// 初始化播放
+myAudio.addEventListener("ended", nextTrack); // 播放完自动切换到下一首
+playTrack(currentTrackIndex); // 初始播放
+
+//guajian
+// 挂件的功能实现
+document.addEventListener('DOMContentLoaded', () => {
+    const widget = document.createElement('div');
+    widget.classList.add('widget');
+    document.body.appendChild(widget);
+
+    let images = ['./img/n1.jpg', './img/n2.jpg', './img/n3.jpg']; // 图片列表
+    let currentIndex = 0;
+
+    // 切换图片
+    widget.addEventListener('click', () => {
+        currentIndex = (currentIndex + 1) % images.length;
+        widget.style.backgroundImage = `url('${images[currentIndex]}')`;
+    });
+
+    // 拖动功能
+    let isDragging = false;
+    let offsetX, offsetY;
+
+    widget.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        offsetX = e.offsetX;
+        offsetY = e.offsetY;
+        widget.style.cursor = 'grabbing';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            widget.style.left = `${e.pageX - offsetX}px`;
+            widget.style.top = `${e.pageY - offsetY}px`;
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+        widget.style.cursor = 'grab';
+    });
+});
+
+</script>
+</body>
+</html>
+
+
+
